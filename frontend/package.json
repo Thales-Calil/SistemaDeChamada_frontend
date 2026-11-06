@@ -1,0 +1,14 @@
+{
+  "name": "sistemaChamadas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma de controle de chamada com arquitetura Microfrontend (Module Federation)",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix host && npm install --prefix alunos && npm install --prefix chamadas && npm install --prefix registro-presenca",
+    "build:remotes": "npm run build --prefix alunos && npm run build --prefix chamadas && npm run build --prefix registro-presenca",
+    "start": "concurrently -n \"Alunos,Chamadas,Registro,Host\" -c \"blue,yellow,magenta,green\" \"npm run preview --prefix alunos\" \"npm run preview --prefix chamadas\" \"npm run preview --prefix registro-presenca\" \"npm run dev --prefix host\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

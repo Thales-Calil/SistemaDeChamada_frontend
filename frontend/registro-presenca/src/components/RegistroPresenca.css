@@ -1,0 +1,334 @@
+.registro-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.registro-header {
+  margin-bottom: 24px;
+}
+
+.voltar-button {
+  border: none;
+  background: transparent;
+  color: #4f46e5;
+  padding: 0;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.voltar-button:hover {
+  color: #4338ca;
+}
+
+.registro-header h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  color: #1f2937;
+}
+
+.registro-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+/* Informações da aula */
+
+.aula-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #e5e7eb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.aula-resumo > div {
+  background: #ffffff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.aula-resumo span {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.aula-resumo strong {
+  color: #374151;
+  font-size: 14px;
+}
+
+/* Resumo */
+
+.presenca-resumo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.resumo-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resumo-card span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.resumo-card strong {
+  color: #1f2937;
+  font-size: 22px;
+}
+
+.resumo-card.presente {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.resumo-card.presente strong {
+  color: #15803d;
+}
+
+.resumo-card.ausente {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.resumo-card.ausente strong {
+  color: #dc2626;
+}
+
+/* Lista */
+
+.lista-presenca {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.lista-header,
+.aluno-presenca {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 160px;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+}
+
+.lista-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.aluno-presenca {
+  border-bottom: 1px solid #f3f4f6;
+  min-height: 66px;
+}
+
+.aluno-presenca:last-child {
+  border-bottom: none;
+}
+
+.aluno-dados {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aluno-dados strong {
+  color: #374151;
+  font-size: 14px;
+}
+
+.aluno-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.matricula {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.presenca-button {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.presenca-button.presente {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.presenca-button.presente:hover {
+  background: #bbf7d0;
+}
+
+.presenca-button.ausente {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.presenca-button.ausente:hover {
+  background: #fecaca;
+}
+
+/* Rodapé */
+
+.registro-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.mensagem-sucesso {
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.footer-acoes {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.cancelar-button,
+.salvar-button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.cancelar-button {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.cancelar-button:hover {
+  background: #e5e7eb;
+}
+
+.salvar-button {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.salvar-button:hover {
+  background: #4338ca;
+}
+
+/* Responsividade */
+
+@media (max-width: 700px) {
+  .registro-container {
+    padding: 20px;
+  }
+
+  .registro-header h2 {
+    font-size: 24px;
+  }
+
+  .aula-resumo {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .presenca-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .lista-header {
+    display: none;
+  }
+
+  .aluno-presenca {
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .matricula {
+    display: none;
+  }
+
+  .presenca-button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .aluno-dados {
+    grid-column: 1;
+  }
+
+  .registro-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .footer-acoes {
+    width: 100%;
+  }
+
+  .cancelar-button,
+  .salvar-button {
+    flex: 1;
+  }
+}
+
+.mensagem-erro {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.presenca-button:disabled,
+.salvar-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
