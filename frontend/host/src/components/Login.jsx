@@ -61,4 +61,8 @@ function Login({ onLoginSucesso }) {
   );
 }
 
+<<<<<<< HEAD
 export default Login;
+=======
+export default Login;
+>>>>>>> 73c32b961a71e046c40e5ab02dbb6e736093c5f4
