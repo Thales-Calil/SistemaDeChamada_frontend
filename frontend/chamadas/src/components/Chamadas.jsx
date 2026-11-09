@@ -1,12 +1,14 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { fetchWithAuth } from '../api/fetchWithAuth'
 import './Chamadas.css'
 
 const RegistroPresenca = lazy(
   () => import('registroPresenca/RegistroPresenca')
 )
 
-const TURMAS_API = 'http://localhost:8083/api/turmas'
-const CHAMADAS_API = 'http://localhost:8082/api/chamadas'
+// Rotas unificadas no Gateway (Porta 8080)
+const TURMAS_API = '/api/turmas'
+const CHAMADAS_API = '/api/chamadas'
 
 function dataAtual() {
   const agora = new Date()
@@ -53,12 +55,13 @@ function Chamadas() {
   const [data, setData] = useState(dataAtual())
   const [horario, setHorario] = useState(horarioAtual())
 
+  // Carregamento de dados enviando o JWT via API Gateway (Porta 8080)
   const carregarDados = useCallback(async () => {
     setCarregando(true)
     setErro('')
 
     try {
-      const respostaTurmas = await fetch(TURMAS_API)
+      const respostaTurmas = await fetchWithAuth(TURMAS_API)
 
       if (!respostaTurmas.ok) {
         throw new Error('Não foi possível carregar as turmas.')
@@ -69,7 +72,7 @@ function Chamadas() {
 
       const chamadasPorTurma = await Promise.all(
         dadosTurmas.map(async (turma) => {
-          const resposta = await fetch(
+          const resposta = await fetchWithAuth(
             `${CHAMADAS_API}/turma/${turma.id}`
           )
 
@@ -97,7 +100,7 @@ function Chamadas() {
     } catch (error) {
       setErro(
         error.message ||
-          'Não foi possível conectar aos serviços de turmas e chamadas.'
+          'Não foi possível conectar aos serviços de turmas e chamadas via Gateway.'
       )
       console.error(error)
     } finally {
@@ -109,6 +112,7 @@ function Chamadas() {
     carregarDados()
   }, [carregarDados])
 
+  // Criação de chamada passando pela validação do Gateway (Restrito a PROFESSOR ou ADMIN)
   async function criarChamada(event) {
     event.preventDefault()
     setErro('')
@@ -116,11 +120,8 @@ function Chamadas() {
     setSalvando(true)
 
     try {
-      const resposta = await fetch(CHAMADAS_API, {
+      const resposta = await fetchWithAuth(CHAMADAS_API, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           turmaId: Number(turmaId),
           data,
@@ -129,6 +130,9 @@ function Chamadas() {
       })
 
       if (!resposta.ok) {
+        if (resposta.status === 403) {
+          throw new Error('Acesso Negado: Apenas PROFESSOR ou ADMIN podem abrir chamadas.')
+        }
         const detalhe = await resposta.text()
         throw new Error(
           detalhe || 'Não foi possível criar a chamada.'
@@ -164,6 +168,7 @@ function Chamadas() {
         <RegistroPresenca
           aula={aulaSelecionada}
           voltar={voltar}
+          fetchWithAuth={fetchWithAuth}
         />
       </Suspense>
     )
@@ -323,7 +328,7 @@ function Chamadas() {
                 </p>
 
                 <span>
-                  {aula.data} • {aula.horario}
+                  {aula.data} — {aula.horario}
                 </span>
               </div>
 

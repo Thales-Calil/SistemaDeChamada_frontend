@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { fetchWithAuth } from '../api/fetchWithAuth'
 import './Alunos.css'
 
-const API_URL = 'http://localhost:8081/api/alunos'
-const TURMAS_API = 'http://localhost:8083/api/turmas'
-const PRESENCAS_API = 'http://localhost:8082/api/presencas'
+// Endpoints unificados no API Gateway (Porta 8080)
+const API_URL = '/api/alunos'
+const TURMAS_API = '/api/turmas'
+const PRESENCAS_API = '/api/presencas'
 
 const FORMULARIO_INICIAL = {
   nome: '',
@@ -24,13 +26,17 @@ function Alunos() {
   const [turmaSelecionada, setTurmaSelecionada] = useState('')
   const [frequencias, setFrequencias] = useState([])
 
+  // 1. Busca de Alunos com autenticação JWT
   const buscarAlunos = useCallback(async () => {
     try {
       setErro('')
 
-      const resposta = await fetch(API_URL)
+      const resposta = await fetchWithAuth(API_URL)
 
       if (!resposta.ok) {
+        if (resposta.status === 403) {
+          throw new Error('Acesso negado: Token ausente ou sem permissão para listar alunos.')
+        }
         throw new Error('Não foi possível carregar os alunos.')
       }
 
@@ -38,7 +44,8 @@ function Alunos() {
       setAlunos(dados)
     } catch (error) {
       setErro(
-        'Não foi possível conectar ao servidor. Verifique se o aluno-service está funcionando.'
+        error.message ||
+          'Não foi possível conectar ao API Gateway. Verifique se os microsserviços estão ativos.'
       )
       console.error(error)
     } finally {
@@ -50,21 +57,28 @@ function Alunos() {
     buscarAlunos()
   }, [buscarAlunos])
 
+  // 2. Busca de Turmas via Gateway
   useEffect(() => {
-  async function carregarTurmas() {
-    const resposta = await fetch(TURMAS_API)
-    const dados = await resposta.json()
+    async function carregarTurmas() {
+      try {
+        const resposta = await fetchWithAuth(TURMAS_API)
+        if (!resposta.ok) return
 
-    setTurmas(dados)
+        const dados = await resposta.json()
+        setTurmas(dados)
 
-    if (dados.length > 0) {
-      setTurmaSelecionada(String(dados[0].id))
+        if (dados.length > 0) {
+          setTurmaSelecionada(String(dados[0].id))
+        }
+      } catch (err) {
+        console.error('Erro ao buscar turmas no Gateway:', err)
+      }
     }
-  }
 
-  carregarTurmas().catch(console.error)
-}, [])
+    carregarTurmas()
+  }, [])
 
+  // 3. Busca de Frequências filtradas por turma via Gateway
   useEffect(() => {
     if (!turmaSelecionada) {
       setFrequencias([])
@@ -72,18 +86,23 @@ function Alunos() {
     }
 
     async function carregarFrequencias() {
-      const resposta = await fetch(
-        `${PRESENCAS_API}/turma/${turmaSelecionada}`
-      )
+      try {
+        const resposta = await fetchWithAuth(
+          `${PRESENCAS_API}/turma/${turmaSelecionada}`
+        )
 
-      if (!resposta.ok) {
-        throw new Error('Erro ao carregar frequências')
+        if (!resposta.ok) {
+          throw new Error('Erro ao carregar frequências')
+        }
+
+        const dados = await resposta.json()
+        setFrequencias(dados)
+      } catch (err) {
+        console.error('Erro ao buscar frequências:', err)
       }
-
-      setFrequencias(await resposta.json())
     }
 
-    carregarFrequencias().catch(console.error)
+    carregarFrequencias()
   }, [turmaSelecionada])
   
   function abrirCadastro() {
@@ -122,6 +141,7 @@ function Alunos() {
     }))
   }
 
+  // 4. Salvar (POST / PUT) via Gateway
   async function salvarAluno(event) {
     event.preventDefault()
     setErro('')
@@ -134,15 +154,16 @@ function Alunos() {
       : API_URL
 
     try {
-      const resposta = await fetch(url, {
+      const resposta = await fetchWithAuth(url, {
         method: editando ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(formulario),
       })
 
       if (!resposta.ok) {
+        if (resposta.status === 403) {
+          throw new Error('Acesso Negado: Apenas ADMIN ou PROFESSOR podem salvar alunos.')
+        }
+
         const detalhe = await resposta.text()
         let mensagemErro = ''
 
@@ -179,34 +200,38 @@ function Alunos() {
     }
   }
 
+  // 5. Excluir (DELETE) via Gateway
   async function excluirAluno(aluno) {
-  const confirmou = window.confirm(
-    `Tem certeza que deseja excluir o aluno ${aluno.nome}?`
-  )
+    const confirmou = window.confirm(
+      `Tem certeza que deseja excluir o aluno ${aluno.nome}?`
+    )
 
-  if (!confirmou) return
+    if (!confirmou) return
 
-  setErro('')
-  setMensagem('')
+    setErro('')
+    setMensagem('')
 
-  try {
-    const resposta = await fetch(`${API_URL}/${aluno.id}`, {
-      method: 'DELETE',
-    })
+    try {
+      const resposta = await fetchWithAuth(`${API_URL}/${aluno.id}`, {
+        method: 'DELETE',
+      })
 
-    if (!resposta.ok) {
-      throw new Error(
-        'Não foi possível excluir o aluno. Verifique se ele possui vínculos no sistema.'
-      )
+      if (!resposta.ok) {
+        if (resposta.status === 403) {
+          throw new Error('Acesso Negado: Apenas perfil ADMIN pode excluir alunos.')
+        }
+        throw new Error(
+          'Não foi possível excluir o aluno. Verifique se ele possui vínculos no sistema.'
+        )
+      }
+
+      setMensagem('Aluno excluído com sucesso!')
+      await buscarAlunos()
+    } catch (error) {
+      setErro(error.message || 'Ocorreu um erro ao excluir o aluno.')
+      console.error(error)
     }
-
-    setMensagem('Aluno excluído com sucesso!')
-    await buscarAlunos()
-  } catch (error) {
-    setErro(error.message || 'Ocorreu um erro ao excluir o aluno.')
-    console.error(error)
   }
-}
 
   return (
     <div className="alunos-container">

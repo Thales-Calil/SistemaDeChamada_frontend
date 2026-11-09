@@ -1,49 +1,51 @@
-import { lazy, Suspense, useState } from 'react'
-import './App.css'
+import { useState, useEffect, lazy, Suspense } from 'react';
+import Login from './components/Login';
+import { getUsuarioLogado, logout } from './services/authService';
 
-const Alunos = lazy(() => import('alunos/Alunos'))
-const Chamadas = lazy(() => import('chamadas/Chamadas'))
-
-function Loading() {
-  return <p>Carregando módulo...</p>
-}
+// Componentes remotos carregados via Module Federation
+const Alunos = lazy(() => import('alunos/Alunos'));
+const Chamadas = lazy(() => import('chamadas/Chamadas'));
 
 function App() {
-  const [activeTab, setActiveTab] = useState(0)
+  const [usuario, setUsuario] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState('chamadas');
+
+  useEffect(() => {
+    const user = getUsuarioLogado();
+    if (user.token) {
+      setUsuario(user);
+    }
+  }, []);
+
+  // Se não houver JWT no localStorage, bloqueia a exibição dos MFEs e força o Login
+  if (!usuario?.token) {
+    return <Login onLoginSucesso={() => setUsuario(getUsuarioLogado())} />;
+  }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div>
-          <h1>Sistema de Chamadas</h1>
-          <p>Gerenciamento de alunos e presença</p>
+    <div className="app-shell">
+      <header className="navbar">
+        <h1>Sistema de Gestão Escolar</h1>
+
+        <nav>
+          <button onClick={() => setAbaAtiva('chamadas')}>Chamadas</button>
+          <button onClick={() => setAbaAtiva('alunos')}>Alunos</button>
+        </nav>
+
+        <div className="user-info">
+          <span>Usuário: <strong>{usuario.username}</strong> ({usuario.role})</span>
+          <button onClick={logout}>Sair</button>
         </div>
       </header>
 
-      <nav className="tabs">
-        <button
-          className={activeTab === 0 ? 'active' : ''}
-          onClick={() => setActiveTab(0)}
-        >
-          Alunos
-        </button>
-
-        <button
-          className={activeTab === 1 ? 'active' : ''}
-          onClick={() => setActiveTab(1)}
-        >
-          Chamadas
-        </button>
-      </nav>
-
-      <main className="content">
-        <Suspense fallback={<Loading />}>
-          {activeTab === 0 && <Alunos />}
-          {activeTab === 1 && <Chamadas />}
+      <main className="conteudo-principal">
+        <Suspense fallback={<div>Carregando Microfrontend...</div>}>
+          {abaAtiva === 'chamadas' && <Chamadas />}
+          {abaAtiva === 'alunos' && <Alunos />}
         </Suspense>
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
