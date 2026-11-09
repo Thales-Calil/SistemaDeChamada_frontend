@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import Login from './components/Login';
-import { getUsuarioLogado, logout } from './services/authService';
+import { getUsuarioLogado, logout } from './services/AuthService.js';
 
 // Componentes remotos carregados via Module Federation
 const Alunos = lazy(() => import('alunos/Alunos'));
