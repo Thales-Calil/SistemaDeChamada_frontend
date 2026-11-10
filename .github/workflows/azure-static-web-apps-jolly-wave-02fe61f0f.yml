@@ -47,6 +47,9 @@ jobs:
           ###### End of Repository/Build Configurations ######
         env: # VARIÁVEL INJETADA AQUI PARA O BUILD DO VITE
           VITE_API_URL: "https://app-api-gateway-chamadas-fng7ehfuash3ckar.eastus2-01.azurewebsites.net"
+          VITE_MFE_ALUNOS_URL: "https://black-bush-0a57ba30f.5.azurestaticapps.net/assets/remoteEntry.js"
+          VITE_MFE_CHAMADAS_URL: "https://gentle-moss-00299440f.5.azurestaticapps.net/assets/remoteEntry.js"
+          VITE_MFE_REGISTRO_URL: "https://ashy-meadow-03b9eb50f.6.azurestaticapps.net/assets/remoteEntry.js"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
