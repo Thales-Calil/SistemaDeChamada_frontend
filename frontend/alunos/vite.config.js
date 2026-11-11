@@ -2,41 +2,48 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 
-export default defineConfig({
-  plugins: [
-    react(),
+export default defineConfig(({ mode }) => {
+  const isProd = mode === 'production'
 
-    federation({
-      name: 'alunos',
+  return {
+    // URL base de onde os arquivos JS/CSS deste MFE serão servidos
+    base: isProd ? '/remotes/alunos/' : '/',
 
-      filename: 'remoteEntry.js',
+    plugins: [
+      react(),
 
-      exposes: {
-        './Alunos': './src/components/Alunos.jsx',
-      },
+      federation({
+        name: 'alunos',
 
-      shared: {
-        react: {
-          singleton: true,
-          requiredVersion: '^19.0.0',
+        filename: 'remoteEntry.js',
+
+        exposes: {
+          './Alunos': './src/components/Alunos.jsx',
         },
-        'react-dom': {
-          singleton: true,
-          requiredVersion: '^19.0.0',
-        },
-      },
-    }),
-  ],
 
-  server: {
-    port: 5174,
-  },
+        shared: {
+          react: {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
+          'react-dom': {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
+        },
+      }),
+    ],
+
+    server: {
+      port: 5174,
+    },
 
     preview: {
-    port: 5174,
-  },
+      port: 5174,
+    },
 
-  build: {
-    target: 'esnext',
-  },
+    build: {
+      target: 'esnext',
+    },
+  }
 })

@@ -15,41 +15,67 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
-       id-token: write
-       contents: read
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      # Step customizado: Compila os 3 MFEs + Host e agrega em host/dist/remotes/
+      - name: Build All Microfrontends and Aggregate
+        env:
+          VITE_API_URL: "https://app-api-gateway-chamadas-fng7ehfuash3ckar.eastus2-01.azurewebsites.net"
+        run: |
+          cd frontend
+
+          # 1. Compila os Microfrontends
+          cd alunos && npm ci && npm run build && cd ..
+          cd chamadas && npm ci && npm run build && cd ..
+          cd registro-presenca && npm ci && npm run build && cd ..
+
+          # 2. Compila o Host
+          cd host && npm ci && npm run build && cd ..
+
+          # 3. Cria a estrutura de pastas /remotes/ no dist do Host
+          mkdir -p host/dist/remotes/alunos
+          mkdir -p host/dist/remotes/chamadas
+          mkdir -p host/dist/remotes/registro
+
+          # 4. Copia a saída dos MFEs para dentro do dist do Host
+          cp -r alunos/dist/* host/dist/remotes/alunos/
+          cp -r chamadas/dist/* host/dist/remotes/chamadas/
+          cp -r registro-presenca/dist/* host/dist/remotes/registro/
+
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
+
       - name: Get Id Token
         uses: actions/github-script@v6
         id: idtoken
         with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
+          script: |
+            const coredemo = require('@actions/core')
+            return await coredemo.getIDToken()
+          result-encoding: string
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_JOLLY_WAVE_02FE61F0F }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "./frontend/host" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "dist" # Built app content directory - optional
+          app_location: "./frontend/host"
+          api_location: ""
+          output_location: "dist"
+          skip_app_build: true # Impede que a Azure sobrescreva o build agregado
           github_id_token: ${{ steps.idtoken.outputs.result }}
-          ###### End of Repository/Build Configurations ######
-        env: # VARIÁVEL INJETADA AQUI PARA O BUILD DO VITE
-          VITE_API_URL: "https://app-api-gateway-chamadas-fng7ehfuash3ckar.eastus2-01.azurewebsites.net"
-          VITE_MFE_ALUNOS_URL: "https://black-bush-0a57ba30f.5.azurestaticapps.net/assets/remoteEntry.js"
-          VITE_MFE_CHAMADAS_URL: "https://gentle-moss-00299440f.5.azurestaticapps.net/assets/remoteEntry.js"
-          VITE_MFE_REGISTRO_URL: "https://ashy-meadow-03b9eb50f.6.azurestaticapps.net/assets/remoteEntry.js"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

@@ -2,9 +2,10 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import Login from './components/Login';
 import { getUsuarioLogado, logout } from './services/authService.js';
 
-// Componentes remotos carregados via Module Federation
+// Componentes remotos carregados via Module Federation (Gerenciados exclusivamente pelo Host)
 const Alunos = lazy(() => import('alunos/Alunos'));
 const Chamadas = lazy(() => import('chamadas/Chamadas'));
+const RegistroPresenca = lazy(() => import('registroPresenca/RegistroPresenca'));
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -40,7 +41,9 @@ function App() {
 
       <main className="conteudo-principal">
         <Suspense fallback={<div>Carregando Microfrontend...</div>}>
-          {abaAtiva === 'chamadas' && <Chamadas />}
+          {abaAtiva === 'chamadas' && (
+            <Chamadas RegistroPresenca={RegistroPresenca} />
+          )}
           {abaAtiva === 'alunos' && <Alunos />}
         </Suspense>
       </main>

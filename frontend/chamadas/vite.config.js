@@ -2,46 +2,48 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 
-export default defineConfig({
-  plugins: [
-    react(),
+export default defineConfig(({ mode }) => {
+  const isProd = mode === 'production'
 
-    federation({
-      name: 'chamadas',
+  return {
+    // Define o caminho base de assets do MFE chamadas em produção
+    base: isProd ? '/remotes/chamadas/' : '/',
 
-      filename: 'remoteEntry.js',
+    plugins: [
+      react(),
 
-      remotes: {
-        registroPresenca:
-          'http://localhost:5176/assets/remoteEntry.js',
-      },
+      federation({
+        name: 'chamadas',
 
-      exposes: {
-        './Chamadas': './src/components/Chamadas.jsx',
-      },
+        filename: 'remoteEntry.js',
 
-      shared: {
-        react: {
-          singleton: true,
-          requiredVersion: '^19.0.0',
+        exposes: {
+          './Chamadas': './src/components/Chamadas.jsx',
         },
-        'react-dom': {
-          singleton: true,
-          requiredVersion: '^19.0.0',
+
+        shared: {
+          react: {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
+          'react-dom': {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
         },
-      },
-    }),
-  ],
+      }),
+    ],
 
-  server: {
-    port: 5175,
-  },
+    server: {
+      port: 5175,
+    },
 
-  preview: {
-  port: 5175,
-},
+    preview: {
+      port: 5175,
+    },
 
-  build: {
-    target: 'esnext',
-  },
+    build: {
+      target: 'esnext',
+    },
+  }
 })

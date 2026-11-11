@@ -2,41 +2,48 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 
-export default defineConfig({
-  plugins: [
-    react(),
+export default defineConfig(({ mode }) => {
+  const isProd = mode === 'production'
 
-    federation({
-      name: 'registroPresenca',
+  return {
+    // Define o caminho base de assets do MFE registro em produção
+    base: isProd ? '/remotes/registro/' : '/',
 
-      filename: 'remoteEntry.js',
+    plugins: [
+      react(),
 
-      exposes: {
-        './RegistroPresenca': './src/components/RegistroPresenca.jsx',
-      },
+      federation({
+        name: 'registroPresenca',
 
-      shared: {
-        react: {
-          singleton: true,
-          requiredVersion: '^19.0.0',
+        filename: 'remoteEntry.js',
+
+        exposes: {
+          './RegistroPresenca': './src/components/RegistroPresenca.jsx',
         },
-        'react-dom': {
-          singleton: true,
-          requiredVersion: '^19.0.0',
+
+        shared: {
+          react: {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
+          'react-dom': {
+            singleton: true,
+            requiredVersion: '^19.0.0',
+          },
         },
-      },
-    }),
-  ],
+      }),
+    ],
 
-  server: {
-    port: 5176,
-  },
+    server: {
+      port: 5176,
+    },
 
-  preview: {
-    port: 5176,
-  },
+    preview: {
+      port: 5176,
+    },
 
-  build: {
-    target: 'esnext',
-  },
+    build: {
+      target: 'esnext',
+    },
+  }
 })

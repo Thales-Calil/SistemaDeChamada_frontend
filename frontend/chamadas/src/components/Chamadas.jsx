@@ -1,10 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { fetchWithAuth } from '../api/fetchWithAuth'
 import './Chamadas.css'
-
-const RegistroPresenca = lazy(
-  () => import('registroPresenca/RegistroPresenca')
-)
 
 // Rotas unificadas no Gateway (Porta 8080)
 const TURMAS_API = '/api/turmas'
@@ -41,7 +37,7 @@ function traduzirStatus(status) {
   return status || 'Indefinido'
 }
 
-function Chamadas() {
+function Chamadas({ RegistroPresenca }) {
   const [turmas, setTurmas] = useState([])
   const [aulas, setAulas] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -163,6 +159,17 @@ function Chamadas() {
   }
 
   if (aulaSelecionada) {
+    if (!RegistroPresenca) {
+      return (
+        <div>
+          <p>Componente de Registro de Presença não foi fornecido pelo Host.</p>
+          <button type="button" onClick={voltar}>
+            Voltar
+          </button>
+        </div>
+      )
+    }
+
     return (
       <Suspense fallback={<p>Carregando registro de presença...</p>}>
         <RegistroPresenca
