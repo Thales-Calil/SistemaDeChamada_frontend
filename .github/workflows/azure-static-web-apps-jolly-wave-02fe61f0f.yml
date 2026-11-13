@@ -24,34 +24,51 @@ jobs:
           lfs: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/host/package-lock.json
+            frontend/alunos/package-lock.json
+            frontend/chamadas/package-lock.json
+            frontend/registro-presenca/package-lock.json
 
-      # Step customizado: Compila os 3 MFEs + Host e agrega em host/dist/remotes/
+      # Somente o HOST é publicado no Static Web Apps. Os 3 MFEs são compilados e servidos
+      # como arquivos estáticos dentro do próprio host (/remotes/<mfe>/assets/remoteEntry.js),
+      # na mesma origem - nenhum remote fica exposto em outro endereço.
       - name: Build All Microfrontends and Aggregate
         env:
-          VITE_API_URL: "https://app-api-gateway-chamadas-fng7ehfuash3ckar.eastus2-01.azurewebsites.net"
+          # URL do API Gateway: defina em Settings > Secrets and variables > Actions > Variables (VITE_API_URL).
+          # Se a variável não existir, usa o valor abaixo.
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://app-api-gateway-chamadas-fng7ehfuash3ckar.eastus2-01.azurewebsites.net' }}
         run: |
+          set -e
           cd frontend
 
           # 1. Compila os Microfrontends
-          cd alunos && npm ci && npm run build && cd ..
-          cd chamadas && npm ci && npm run build && cd ..
-          cd registro-presenca && npm ci && npm run build && cd ..
+          (cd alunos && npm ci && npm run build)
+          (cd chamadas && npm ci && npm run build)
+          (cd registro-presenca && npm ci && npm run build)
 
           # 2. Compila o Host
-          cd host && npm ci && npm run build && cd ..
+          (cd host && npm ci && npm run build)
 
-          # 3. Cria a estrutura de pastas /remotes/ no dist do Host
-          mkdir -p host/dist/remotes/alunos
-          mkdir -p host/dist/remotes/chamadas
-          mkdir -p host/dist/remotes/registro
+          # 3. Copia SOMENTE os assets dos MFEs para dentro do host
+          #    (index.html / App de teste dos remotes não vão para produção)
+          mkdir -p host/dist/remotes/alunos host/dist/remotes/chamadas host/dist/remotes/registro
+          cp -r alunos/dist/assets host/dist/remotes/alunos/
+          cp -r chamadas/dist/assets host/dist/remotes/chamadas/
+          cp -r registro-presenca/dist/assets host/dist/remotes/registro/
 
-          # 4. Copia a saída dos MFEs para dentro do dist do Host
-          cp -r alunos/dist/* host/dist/remotes/alunos/
-          cp -r chamadas/dist/* host/dist/remotes/chamadas/
-          cp -r registro-presenca/dist/* host/dist/remotes/registro/
+          # 4. Falha o deploy se algum remoteEntry.js não existir (evita publicar um site quebrado)
+          for mfe in alunos chamadas registro; do
+            test -f "host/dist/remotes/$mfe/assets/remoteEntry.js" || { echo "remoteEntry.js ausente em $mfe"; exit 1; }
+          done
+
+          # 5. Libera no Content-Security-Policy apenas a URL do API Gateway
+          sed -i "s#__API_URL__#${VITE_API_URL}#" host/dist/staticwebapp.config.json
+          grep -q "__API_URL__" host/dist/staticwebapp.config.json && { echo "CSP sem URL do gateway"; exit 1; } || true
 
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client

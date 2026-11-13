@@ -8,3 +8,18 @@ Comandos para atualizar e rodar após alterar:
 
 npm run build:remotes
 npm run start
+
+## Frontend - como funciona agora
+
+- **Somente o host é publicado** no Azure Static Web Apps. Os 3 microfrontends são compilados e copiados para `host/dist/remotes/<mfe>/assets/` (mesma origem). O deploy falha se algum `remoteEntry.js` não for gerado.
+- **Configuração do SWA**: só o `staticwebapp.config.json` da raiz (o do host) é lido pelo Azure. As regras dos remotes foram migradas para ele (o CORS `*` que existia nos remotes não é mais necessário, pois tudo é servido pela mesma origem).
+- **URL do API Gateway**: variável `VITE_API_URL` em GitHub > Settings > Secrets and variables > Actions > Variables (com valor padrão no workflow).
+- **Sessão**: o token fica no `sessionStorage`, expira junto com o JWT e qualquer resposta 401 volta para o login.
+- **Perfis**: ADMIN vê Chamadas, Alunos (cadastro + matrícula nas turmas) e Usuários; PROFESSOR vê Chamadas e Alunos das suas turmas (sem cadastros); ALUNO vê apenas "Meus dados".
+- **Falha de microfrontend**: cada remoto é carregado com novas tentativas e, se falhar, só aquela área mostra o erro (o resto do sistema continua funcionando).
+
+Rodar localmente:
+
+    npm run install:all
+    npm run build:remotes
+    npm run start

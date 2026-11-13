@@ -332,3 +332,25 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* Atalhos para marcar todos */
+.marcar-todos {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.marcar-todos button {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.marcar-todos button:hover {
+  background: #f5f7ff;
+  color: #4f46e5;
+}

@@ -1,38 +1,54 @@
+import { CHAVE_SESSAO, encerrarSessao, getSessao } from '../api/fetchWithAuth.js'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '')
 
 export async function login(username, password) {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
-  });
-
-  if (!response.ok) {
-    throw new Error('Usuário ou senha inválidos.');
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    })
+  } catch {
+    throw new Error('Não foi possível conectar ao API Gateway.')
   }
 
-  const data = await response.json();
+  if (response.status === 401) {
+    throw new Error('Usuário ou senha inválidos.')
+  }
+  if (!response.ok) {
+    throw new Error(`Erro ao autenticar (HTTP ${response.status}).`)
+  }
 
-  // Armazena no localStorage para acesso compartilhado entre todos os MFEs
-  localStorage.setItem('user_token', data.token);
-  localStorage.setItem('user_role', data.role);
-  localStorage.setItem('user_name', username);
+  const data = await response.json()
 
-  return data;
+  // Sessão compartilhada com os MFEs. expiraEm permite voltar ao login quando o token vencer.
+  sessionStorage.setItem(
+    CHAVE_SESSAO,
+    JSON.stringify({
+      token: data.token,
+      role: data.role,
+      username: data.username || username,
+      userId: data.userId,
+      referenciaId: data.referenciaId ?? null,
+      expiraEm: Date.now() + (data.expiresIn || 0) * 1000,
+    })
+  )
+
+  // limpa a sessão antiga (versão anterior guardava no localStorage)
+  localStorage.removeItem('user_token')
+  localStorage.removeItem('user_role')
+  localStorage.removeItem('user_name')
+
+  return data
 }
 
-export function logout() {
-  localStorage.removeItem('user_token');
-  localStorage.removeItem('user_role');
-  localStorage.removeItem('user_name');
-  window.location.reload();
+export function logout(motivo = 'logout') {
+  encerrarSessao(motivo)
 }
 
+/** Usuário logado ou null (sessão ausente ou expirada). */
 export function getUsuarioLogado() {
-  return {
-    token: localStorage.getItem('user_token'),
-    role: localStorage.getItem('user_role'),
-    username: localStorage.getItem('user_name')
-  };
+  return getSessao()
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { login } from '../services/authService.js';
 import './Login.css';
 
-function Login({ onLoginSucesso }) {
+function Login({ onLoginSucesso, aviso }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [erro, setErro] = useState('');
@@ -28,6 +28,7 @@ function Login({ onLoginSucesso }) {
       <div className="login-card">
         <h2>Login - Sistema de Chamadas</h2>
         
+        {aviso && !erro && <div className="login-aviso">{aviso}</div>}
         {erro && <div className="login-error">{erro}</div>}
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -37,7 +38,8 @@ function Login({ onLoginSucesso }) {
               type="text" 
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
-              placeholder="Ex: admin ou professor"
+              placeholder="Seu usuário"
+              autoComplete="username"
               required 
             />
           </div>
@@ -48,6 +50,7 @@ function Login({ onLoginSucesso }) {
               type="password" 
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
+              autoComplete="current-password"
               required 
             />
           </div>

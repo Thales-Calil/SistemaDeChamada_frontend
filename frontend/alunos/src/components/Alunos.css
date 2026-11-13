@@ -293,3 +293,93 @@
   max-width: 360px;
   margin: 20px 0;
 }
+/* ===== Matrícula (ADMIN) ===== */
+.filtro-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 16px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.aluno-turma-tag {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.aluno-turma-tag.matriculado {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.botao-matricula {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.botao-matricula:hover {
+  background: #e0e7ff;
+}
+
+.botao-matricula.remover {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* ===== Visão do ALUNO ===== */
+.meus-dados-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+  max-width: 560px;
+}
+
+.frequencia-tabela {
+  width: 100%;
+  max-width: 900px;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.frequencia-tabela th,
+.frequencia-tabela td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+
+.frequencia-tabela th {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.alerta-frequencia {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}

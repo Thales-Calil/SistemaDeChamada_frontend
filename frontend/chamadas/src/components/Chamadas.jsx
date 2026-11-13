@@ -1,8 +1,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
-import { fetchWithAuth } from '../api/fetchWithAuth'
+import { fetchWithAuth, getJson, getUsuario, lerErro } from '../api/fetchWithAuth'
 import './Chamadas.css'
 
-// Rotas unificadas no Gateway (Porta 8080)
+// Rotas unificadas no Gateway
 const TURMAS_API = '/api/turmas'
 const CHAMADAS_API = '/api/chamadas'
 
@@ -11,7 +11,6 @@ function dataAtual() {
   const ano = agora.getFullYear()
   const mes = String(agora.getMonth() + 1).padStart(2, '0')
   const dia = String(agora.getDate()).padStart(2, '0')
-
   return `${ano}-${mes}-${dia}`
 }
 
@@ -19,13 +18,11 @@ function horarioAtual() {
   const agora = new Date()
   const horas = String(agora.getHours()).padStart(2, '0')
   const minutos = String(agora.getMinutes()).padStart(2, '0')
-
   return `${horas}:${minutos}`
 }
 
 function formatarData(data) {
   if (!data) return ''
-
   const [ano, mes, dia] = data.split('-')
   return `${dia}/${mes}/${ano}`
 }
@@ -33,11 +30,17 @@ function formatarData(data) {
 function traduzirStatus(status) {
   if (status === 'FINALIZADA') return 'Presença registrada'
   if (status === 'ABERTA') return 'Em andamento'
-
   return status || 'Indefinido'
 }
 
-function Chamadas({ RegistroPresenca }) {
+/**
+ * ADMIN: chamadas de todas as turmas | PROFESSOR: só das suas turmas (o backend filtra).
+ * ALUNO não acessa esta tela (o Host não mostra a aba e o Gateway bloqueia).
+ */
+function Chamadas({ RegistroPresenca, usuario: usuarioProp }) {
+  const usuario = usuarioProp || getUsuario()
+  const podeGerenciar = usuario?.role === 'ADMIN' || usuario?.role === 'PROFESSOR'
+
   const [turmas, setTurmas] = useState([])
   const [aulas, setAulas] = useState([])
   const [carregando, setCarregando] = useState(true)
@@ -51,54 +54,40 @@ function Chamadas({ RegistroPresenca }) {
   const [data, setData] = useState(dataAtual())
   const [horario, setHorario] = useState(horarioAtual())
 
-  // Carregamento de dados enviando o JWT via API Gateway (Porta 8080)
   const carregarDados = useCallback(async () => {
     setCarregando(true)
     setErro('')
 
     try {
-      const respostaTurmas = await fetchWithAuth(TURMAS_API)
-
-      if (!respostaTurmas.ok) {
-        throw new Error('Não foi possível carregar as turmas.')
-      }
-
-      const dadosTurmas = await respostaTurmas.json()
+      const dadosTurmas = await getJson(TURMAS_API, 'Não foi possível carregar as turmas.')
       setTurmas(dadosTurmas)
 
       const chamadasPorTurma = await Promise.all(
         dadosTurmas.map(async (turma) => {
-          const resposta = await fetchWithAuth(
-            `${CHAMADAS_API}/turma/${turma.id}`
+          const chamadasTurma = await getJson(
+            `${CHAMADAS_API}/turma/${turma.id}`,
+            `Não foi possível carregar as chamadas da turma ${turma.nome}.`
           )
-
-          if (!resposta.ok) {
-            throw new Error(
-              `Não foi possível carregar as chamadas da turma ${turma.nome}.`
-            )
-          }
-
-          const chamadasTurma = await resposta.json()
-
           return chamadasTurma.map((chamada) => ({
             ...chamada,
             turmaId: turma.id,
+            turmaNome: turma.nome,
             disciplina: turma.disciplinaNome,
             professor: turma.professorNome,
+            dataIso: chamada.data,
             data: formatarData(chamada.data),
             horario: chamada.horario?.slice(0, 5) || '',
+            statusOriginal: chamada.status,
             status: traduzirStatus(chamada.status),
           }))
         })
       )
 
-      setAulas(chamadasPorTurma.flat())
+      // mais recentes primeiro
+      setAulas(chamadasPorTurma.flat().sort((a, b) =>
+        `${b.dataIso} ${b.horario}`.localeCompare(`${a.dataIso} ${a.horario}`)))
     } catch (error) {
-      setErro(
-        error.message ||
-          'Não foi possível conectar aos serviços de turmas e chamadas via Gateway.'
-      )
-      console.error(error)
+      setErro(error.message || 'Não foi possível conectar aos serviços de turmas e chamadas.')
     } finally {
       setCarregando(false)
     }
@@ -108,7 +97,6 @@ function Chamadas({ RegistroPresenca }) {
     carregarDados()
   }, [carregarDados])
 
-  // Criação de chamada passando pela validação do Gateway (Restrito a PROFESSOR ou ADMIN)
   async function criarChamada(event) {
     event.preventDefault()
     setErro('')
@@ -118,39 +106,35 @@ function Chamadas({ RegistroPresenca }) {
     try {
       const resposta = await fetchWithAuth(CHAMADAS_API, {
         method: 'POST',
-        body: JSON.stringify({
-          turmaId: Number(turmaId),
-          data,
-          horario,
-        }),
+        body: JSON.stringify({ turmaId: Number(turmaId), data, horario }),
       })
-
       if (!resposta.ok) {
-        if (resposta.status === 403) {
-          throw new Error('Acesso Negado: Apenas PROFESSOR ou ADMIN podem abrir chamadas.')
-        }
-        const detalhe = await resposta.text()
-        throw new Error(
-          detalhe || 'Não foi possível criar a chamada.'
-        )
+        throw new Error(await lerErro(resposta, 'Não foi possível criar a chamada.'))
       }
 
       setFormularioAberto(false)
       setMensagem('Chamada criada com sucesso!')
       setData(dataAtual())
       setHorario(horarioAtual())
-
       await carregarDados()
     } catch (error) {
       setErro(error.message || 'Erro ao criar chamada.')
-      console.error(error)
     } finally {
       setSalvando(false)
     }
   }
 
-  function abrirRegistro(aula) {
-    setAulaSelecionada(aula)
+  async function excluirChamada(aula) {
+    if (!window.confirm(`Excluir a chamada de ${aula.data} às ${aula.horario}?`)) return
+    setErro('')
+    setMensagem('')
+    const resposta = await fetchWithAuth(`${CHAMADAS_API}/${aula.id}`, { method: 'DELETE' })
+    if (!resposta.ok) {
+      setErro(await lerErro(resposta, 'Não foi possível excluir a chamada.'))
+      return
+    }
+    setMensagem('Chamada excluída.')
+    await carregarDados()
   }
 
   function voltar() {
@@ -161,22 +145,16 @@ function Chamadas({ RegistroPresenca }) {
   if (aulaSelecionada) {
     if (!RegistroPresenca) {
       return (
-        <div>
+        <div className="chamadas-container">
           <p>Componente de Registro de Presença não foi fornecido pelo Host.</p>
-          <button type="button" onClick={voltar}>
-            Voltar
-          </button>
+          <button type="button" onClick={voltar}>Voltar</button>
         </div>
       )
     }
 
     return (
-      <Suspense fallback={<p>Carregando registro de presença...</p>}>
-        <RegistroPresenca
-          aula={aulaSelecionada}
-          voltar={voltar}
-          fetchWithAuth={fetchWithAuth}
-        />
+      <Suspense fallback={<p className="chamadas-container">Carregando registro de presença...</p>}>
+        <RegistroPresenca aula={aulaSelecionada} voltar={voltar} fetchWithAuth={fetchWithAuth} usuario={usuario} />
       </Suspense>
     )
   }
@@ -186,57 +164,45 @@ function Chamadas({ RegistroPresenca }) {
       <div className="chamadas-header">
         <div>
           <h2>Chamadas</h2>
-          <p>Gerencie a presença dos alunos nas aulas.</p>
+          <p>
+            {usuario?.role === 'PROFESSOR'
+              ? 'Chamadas das suas turmas.'
+              : 'Gerencie a presença dos alunos nas aulas.'}
+          </p>
         </div>
 
         <div className="chamadas-header-acoes">
-          <span className="total-aulas">
-            {aulas.length} chamadas
-          </span>
+          <span className="total-aulas">{aulas.length} chamadas</span>
 
-          <button
-            type="button"
-            className="botao-criar-chamada"
-            onClick={() => {
-              setErro('')
-              setMensagem('')
-              setFormularioAberto(!formularioAberto)
-            }}
-            disabled={turmas.length === 0}
-          >
-            + Criar chamada
-          </button>
+          {podeGerenciar && (
+            <button
+              type="button"
+              className="botao-criar-chamada"
+              onClick={() => {
+                setErro('')
+                setMensagem('')
+                setFormularioAberto(!formularioAberto)
+              }}
+              disabled={turmas.length === 0}
+            >
+              + Criar chamada
+            </button>
+          )}
         </div>
       </div>
 
-      {mensagem && (
-        <p className="chamadas-sucesso" role="status">
-          {mensagem}
-        </p>
-      )}
+      {mensagem && <p className="chamadas-sucesso" role="status">{mensagem}</p>}
+      {erro && <p className="chamadas-erro" role="alert">{erro}</p>}
 
-      {erro && (
-        <p className="chamadas-erro" role="alert">
-          {erro}
-        </p>
-      )}
-
-      {formularioAberto && (
+      {podeGerenciar && formularioAberto && (
         <div className="criar-chamada-card">
           <h3>Nova chamada</h3>
 
           <form onSubmit={criarChamada}>
             <div className="campo-chamada">
               <label htmlFor="turmaId">Turma</label>
-
-              <select
-                id="turmaId"
-                value={turmaId}
-                onChange={(event) => setTurmaId(event.target.value)}
-                required
-              >
+              <select id="turmaId" value={turmaId} onChange={(event) => setTurmaId(event.target.value)} required>
                 <option value="">Selecione uma turma</option>
-
                 {turmas.map((turma) => (
                   <option key={turma.id} value={turma.id}>
                     {turma.nome} — {turma.disciplinaNome}
@@ -248,42 +214,20 @@ function Chamadas({ RegistroPresenca }) {
             <div className="campos-data-horario">
               <div className="campo-chamada">
                 <label htmlFor="data">Data</label>
-                <input
-                  id="data"
-                  type="date"
-                  value={data}
-                  onChange={(event) => setData(event.target.value)}
-                  required
-                />
+                <input id="data" type="date" value={data} onChange={(event) => setData(event.target.value)} required />
               </div>
 
               <div className="campo-chamada">
                 <label htmlFor="horario">Horário</label>
-                <input
-                  id="horario"
-                  type="time"
-                  value={horario}
-                  onChange={(event) => setHorario(event.target.value)}
-                  required
-                />
+                <input id="horario" type="time" value={horario} onChange={(event) => setHorario(event.target.value)} required />
               </div>
             </div>
 
             <div className="acoes-formulario-chamada">
-              <button
-                type="button"
-                className="botao-cancelar-chamada"
-                onClick={() => setFormularioAberto(false)}
-                disabled={salvando}
-              >
+              <button type="button" className="botao-cancelar-chamada" onClick={() => setFormularioAberto(false)} disabled={salvando}>
                 Cancelar
               </button>
-
-              <button
-                type="submit"
-                className="botao-criar-chamada"
-                disabled={salvando || turmas.length === 0}
-              >
+              <button type="submit" className="botao-criar-chamada" disabled={salvando || turmas.length === 0}>
                 {salvando ? 'Criando...' : 'Criar chamada'}
               </button>
             </div>
@@ -295,74 +239,50 @@ function Chamadas({ RegistroPresenca }) {
 
       {!carregando && !erro && turmas.length === 0 && (
         <p>
-          Nenhuma turma cadastrada. Cadastre uma turma antes de criar
-          chamadas.
+          {usuario?.role === 'PROFESSOR'
+            ? 'Você ainda não tem turmas atribuídas.'
+            : 'Nenhuma turma cadastrada. Cadastre uma turma antes de criar chamadas.'}
         </p>
       )}
 
       {!carregando && !erro && turmas.length > 0 && aulas.length === 0 && (
-        <p>
-          Nenhuma chamada cadastrada. Clique em “Criar chamada” para
-          registrar a primeira aula.
-        </p>
+        <p>Nenhuma chamada cadastrada. Clique em “Criar chamada” para registrar a primeira aula.</p>
       )}
 
       {!carregando && aulas.length > 0 && (
         <div className="chamadas-list">
-          {aulas.map((aula) => (
-            <div className="aula-card" key={aula.id}>
-              <div className="aula-data">
-                <span className="dia">
-                  {aula.data.split('/')[0]}
-                </span>
+          {aulas.map((aula) => {
+            const finalizada = aula.statusOriginal === 'FINALIZADA'
+            return (
+              <div className="aula-card" key={aula.id}>
+                <div className="aula-data">
+                  <span className="dia">{aula.data.split('/')[0]}</span>
+                  <span className="mes">{aula.data.split('/')[1]}</span>
+                </div>
 
-                <span className="mes">
-                  {aula.data.split('/')[1]}
-                </span>
+                <div className="aula-info">
+                  <h3>{aula.disciplina}</h3>
+                  <p>Turma: <strong>{aula.turmaNome || aula.turmaId}</strong></p>
+                  <p>Professor: <strong>{aula.professor}</strong></p>
+                  <span>{aula.data} — {aula.horario}</span>
+                </div>
+
+                <div className="aula-acoes">
+                  <span className={`status ${finalizada ? 'registrada' : 'andamento'}`}>{aula.status}</span>
+
+                  <button type="button" onClick={() => setAulaSelecionada(aula)}>
+                    {finalizada ? 'Ver presenças' : 'Registrar presença'}
+                  </button>
+
+                  {podeGerenciar && !finalizada && (
+                    <button type="button" className="botao-excluir-chamada" onClick={() => excluirChamada(aula)}>
+                      Excluir
+                    </button>
+                  )}
+                </div>
               </div>
-
-              <div className="aula-info">
-                <h3>{aula.disciplina}</h3>
-
-                <p>
-                  Turma: <strong>{turmas.find(
-                    (turma) => turma.id === aula.turmaId
-                  )?.nome || aula.turmaId}</strong>
-                </p>
-
-                <p>
-                  Professor: <strong>{aula.professor}</strong>
-                </p>
-
-                <span>
-                  {aula.data} — {aula.horario}
-                </span>
-              </div>
-
-              <div className="aula-acoes">
-                <span
-                  className={`status ${
-                    aula.status === 'Presença registrada'
-                      ? 'registrada'
-                      : aula.status === 'Em andamento'
-                        ? 'andamento'
-                        : 'agendada'
-                  }`}
-                >
-                  {aula.status}
-                </span>
-
-                <button
-                  onClick={() => abrirRegistro(aula)}
-                  disabled={aula.status === 'Presença registrada'}
-                >
-                  {aula.status === 'Presença registrada'
-                    ? 'Chamada finalizada'
-                    : 'Registrar presença'}
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

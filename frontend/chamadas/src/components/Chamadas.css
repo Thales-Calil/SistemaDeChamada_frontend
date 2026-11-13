@@ -311,3 +311,13 @@
     padding: 18px;
   }
 }
+/* Botão de excluir chamada em andamento */
+.aula-acoes .botao-excluir-chamada {
+  background: #ffffff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.aula-acoes .botao-excluir-chamada:hover {
+  background: #fef2f2;
+}
