@@ -100,7 +100,7 @@ function RegistroPresenca({ aula, voltar, fetchWithAuth }) {
       setSalvando(true)
       setErro('')
 
-      // 3.1: uma requisição só: grava todos e finaliza (transação única no chamada-service)
+      // 3.1: uma requisição só: grava todos e finaliza (transação única no turma-service)
       const resposta = await httpFetch(`${CHAMADAS_API}/${aula.id}/presencas/lote`, {
         method: 'POST',
         body: JSON.stringify({

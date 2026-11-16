@@ -1,4 +1,13 @@
+# Sistema de Chamadas - Frontend
 
+Documentação de arquitetura (arc42): [docs/arc42.md](docs/arc42.md)
+
+Todas as chamadas de API passam pelo API Gateway (`VITE_API_URL`); o frontend não conhece a URL de nenhum microsserviço.
+
+**Nova assinatura Azure:** ao criar o Static Web Apps novo, o Azure gera um workflow com outro nome e outro secret de
+deploy. Leve para ele os passos de build deste workflow (build dos remotos, cópia para `/remotes/*`, verificação
+do `remoteEntry.js` e CSP), crie a variável `VITE_API_URL` com a URL do novo gateway e configure `FRONTEND_URL` no
+gateway com a URL do novo site.
 
 Problemas encontrados: 
 1. Ao instalar o vitejs, dava problema de versão por ser a versão mais recente não carregando os módulos ao testar, a solução encontrada foi dar um downgrade de versão nos remotes para 7.3.0 do vite e para 5.1.4 do react. 
